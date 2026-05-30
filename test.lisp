@@ -99,6 +99,32 @@
    "definition prefix false positive"
    (s "(notdef~%  name~%  args~%  body~%)~%~%")
    (fmt (s "(notdef name~%args~%body)")))
+  (check= "keyword pairs single line unchanged"
+          (s "(dict :one 10 :two 20 :three 30)~%~%")
+          (fmt "(dict :one 10 :two 20 :three 30)"))
+  (check=
+   "keyword pairs multiline"
+   (s "(dict~%  :one 10~%  :two 20~%  :three 30~%)~%~%")
+   (fmt (s "(dict~%  :one 10 :two 20 :three 30~%)")))
+  (check= "keyword-only pairs single line unchanged"
+          (s "(dict :one :two :three :four)~%~%")
+          (fmt "(dict :one :two :three :four)"))
+  (check=
+   "keyword-only pairs multiline"
+   (s "(dict~%  :one :two~%  :three :four~%)~%~%")
+   (fmt (s "(dict~%  :one :two :three :four~%)")))
+  (check=
+   "keyword missing value"
+   (s "(dict~%  :one 10~%  :two~%)~%~%")
+   (fmt (s "(dict~%  :one 10 :two~%)")))
+  (check=
+   "keyword multiline value guard"
+   (s "(dict~%  :one~%  (value~%    one~%    two~%  )~%)~%~%")
+   (fmt (s "(dict~%  :one (value one~%    two~%  )~%)")))
+  (check=
+   "loop keyword clauses"
+   (s "(loop~%  :from 0~%  :for previous = nil~%  :then form~%  :do ...~%)~%~%")
+   (fmt (s "(loop~%  :from 0 :for previous = nil :then form :do ...~%)")))
   (check= "prefix hash chain" (s "###one two~%~%") (fmt "# # # one two"))
   (check= "prefix quote list" (s "#'(one two)~%~%") (fmt "# ' ( one two )"))
   (check= "backquote atom number" (s "`123~%~%") (fmt "`123"))
@@ -175,6 +201,9 @@
                        (s "(define~%  my-var~%  (+ one~%    two~%  )~%)")
                        (s "(define (square x)~%(* x x))")
                        (s "(defmethod render~%:around~%((x thing))~%body)")
+                       (s "(dict~%  :one 10 :two 20 :three 30~%)")
+                       (s "(dict~%  :one :two :three :four~%)")
+                       (s "(loop~%  :from 0 :for previous = nil :then form :do ...~%)")
                        (s "#'#':#(one two~%)"))))
     (dolist (sample samples)
       (let ((once (fmt sample)))

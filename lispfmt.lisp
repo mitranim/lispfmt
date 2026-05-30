@@ -455,6 +455,9 @@
        (plusp (length (node-text node)))
        (char= (char (node-text node) 0) #\:)))
 
+(defun loop-operator-p (node)
+  (atom-text= node "loop"))
+
 (defun definition-name-p (node)
   (or (member (node-kind node) '(:list :vector))
       (and (eq (node-kind node) :atom)
@@ -524,6 +527,72 @@
 
 (defun indent-string (indent)
   (make-string indent :initial-element #\Space))
+
+(defun format-for-child-line (node indent)
+  (if (binding-list-p node)
+      (format-list-node node indent :force-multiline t)
+      (format-node node indent)))
+
+(defun consume-generic-keyword-line (children indent)
+  (let ((child (first children))
+        (next (second children)))
+    (if (and (keyword-atom-p child)
+             next
+             (inline-safe-node-p next))
+        (values (format nil "~A ~A"
+                        (format-node child indent)
+                        (node-inline-string next))
+                (cddr children)
+                next)
+        (values (format-for-child-line child indent)
+                (rest children)
+                child))))
+
+(defun consume-loop-keyword-line (children indent)
+  (let ((child (first children)))
+    (if (keyword-atom-p child)
+        (let ((line-nodes (list child))
+              (rest (rest children)))
+          (loop while (and rest
+                           (not (keyword-atom-p (first rest)))
+                           (inline-safe-node-p (first rest)))
+                do (setf line-nodes (append line-nodes (list (first rest)))
+                         rest (rest rest)))
+          (values (format-inline-children line-nodes)
+                  rest
+                  (first (last line-nodes))))
+        (values (format-for-child-line child indent)
+                (rest children)
+                child))))
+
+(defun consume-plain-child-line (children indent)
+  (let ((child (first children)))
+    (values (format-for-child-line child indent)
+            (rest children)
+            child)))
+
+(defun write-child-lines (children indent out &key loop-style group-keywords previous)
+  (loop while children
+        do (multiple-value-bind (line rest last-node)
+               (cond
+                 (loop-style
+                  (consume-loop-keyword-line children indent))
+                 (group-keywords
+                  (consume-generic-keyword-line children indent))
+                 (t
+                  (consume-plain-child-line children indent)))
+             (if (and previous
+                      (= (node-end-line previous) (node-start-line (first children)))
+                      (eq (node-kind (first children)) :line-comment))
+                 (progn
+                   (write-char #\Space out)
+                   (write-string line out))
+                 (progn
+                   (write-char #\Newline out)
+                   (write-string (indent-string indent) out)
+                   (write-string line out)))
+             (setf previous last-node
+                   children rest))))
 
 (defun format-node (node indent)
   (case (node-kind node)
@@ -598,28 +667,19 @@
              (write-string (format-node (first remaining) (+ indent (length open-token) 1)) out)
              (setf previous (first remaining)
                    remaining (rest remaining)))
-           (dolist (child remaining)
-             (if (trailing-line-comment-p previous child)
-                 (progn
-                   (write-char #\Space out)
-                   (write-string (format-node child (+ indent +indent+)) out))
-                 (progn
-                   (write-char #\Newline out)
-                   (write-string (indent-string (+ indent +indent+)) out)
-                   (if (binding-list-p child)
-                       (write-string (format-list-node child (+ indent +indent+) :force-multiline t) out)
-                       (write-string (format-node child (+ indent +indent+)) out))))
-             (setf previous child)))
+           (write-child-lines remaining
+                              (+ indent +indent+)
+                              out
+                              :loop-style (loop-operator-p (first children))
+                              :group-keywords (not (def-operator-p (first children)))
+                              :previous previous))
          (write-char #\Newline out)
          (write-string (indent-string indent) out)
          (write-string close out)))
       (t
        (with-output-to-string (out)
          (write-string open-token out)
-         (dolist (child children)
-           (write-char #\Newline out)
-           (write-string (indent-string (+ indent +indent+)) out)
-           (write-string (format-node child (+ indent +indent+)) out))
+         (write-child-lines children (+ indent +indent+) out :group-keywords t)
          (write-char #\Newline out)
          (write-string (indent-string indent) out)
          (write-string close out))))))
