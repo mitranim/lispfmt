@@ -582,6 +582,13 @@
               (first rest))
       (values line-items rest (loop-line-item-node (first (last line-items))))))
 
+(defun consume-loop-item (line-items rest rewrite-p)
+  (if rest
+      (values (append line-items (list (loop-line-item (first rest) rewrite-p)))
+              (rest rest)
+              (first rest))
+      (values line-items rest (loop-line-item-node (first (last line-items))))))
+
 (defun consume-loop-assignment (line-items rest last-node)
   (if (and rest
            (atom-text= (first rest) "="))
@@ -612,6 +619,32 @@
 (defun loop-body-marker-p (node)
   (loop-keyword-name-in-p node '("do" "doing" "initially" "finally")))
 
+(defun loop-value-start-marker-p (node)
+  (or (loop-value-marker-p node)
+      (loop-action-marker-p node)
+      (loop-body-marker-p node)
+      (loop-keyword-name-in-p node
+                              '("else" "end" "being" "each" "the"
+                                "hash-key" "hash-keys" "hash-value"
+                                "hash-values" "symbol" "symbols"
+                                "present-symbol" "present-symbols"
+                                "external-symbol" "external-symbols"))))
+
+(defun consume-loop-type (line-items rest last-node)
+  (cond
+    ((and rest
+          (loop-keyword-name-in-p (first rest) '("of-type")))
+     (multiple-value-bind (line-items rest last-node)
+         (consume-loop-item line-items rest t)
+       (consume-loop-payload line-items rest)))
+    ((and rest
+          (not (atom-text= (first rest) "="))
+          (not (loop-value-start-marker-p (first rest)))
+          (inline-safe-node-p (first rest)))
+     (consume-loop-payload line-items rest))
+    (t
+     (values line-items rest last-node))))
+
 (defun consume-loop-line-group (children)
   (let* ((child (first children))
          (line-items (list (loop-line-item child t)))
@@ -620,7 +653,9 @@
       ((loop-binding-marker-p child)
        (multiple-value-bind (line-items rest last-node)
            (consume-loop-payload line-items rest)
-         (consume-loop-assignment line-items rest last-node)))
+         (multiple-value-bind (line-items rest last-node)
+             (consume-loop-type line-items rest last-node)
+           (consume-loop-assignment line-items rest last-node))))
       ((or (loop-value-marker-p child)
            (loop-action-marker-p child))
        (consume-loop-payload line-items rest))

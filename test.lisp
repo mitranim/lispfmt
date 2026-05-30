@@ -169,6 +169,26 @@
    "loop for payload not normalized"
    (s "(loop~%  :for for~%  :in xs~%  :collect for~%)~%~%")
    (fmt (s "(loop~%  for for in xs collect for~%)")))
+  (check=
+   "loop typed with assignment"
+   (s "(loop~%  :with x fixnum = 1~%  :collect x~%)~%~%")
+   (fmt (s "(loop~%  with x fixnum = 1 collect x~%)")))
+  (check=
+   "loop with assignment"
+   (s "(loop~%  :with x = 1~%  :collect x~%)~%~%")
+   (fmt (s "(loop~%  with x = 1 collect x~%)")))
+  (check=
+   "loop typed for from"
+   (s "(loop~%  :for i fixnum~%  :from 0~%  :collect i~%)~%~%")
+   (fmt (s "(loop~%  for i fixnum from 0 collect i~%)")))
+  (check=
+   "loop of-type for"
+   (s "(loop~%  :for x :of-type fixnum~%  :in xs~%  :collect x~%)~%~%")
+   (fmt (s "(loop~%  for x of-type fixnum in xs collect x~%)")))
+  (check=
+   "loop typed collision payload"
+   (s "(loop~%  :for it fixnum~%  :in xs~%  :collect it~%)~%~%")
+   (fmt (s "(loop~%  for it fixnum in xs collect it~%)")))
   (check= "prefix hash chain" (s "###one two~%~%") (fmt "# # # one two"))
   (check= "prefix quote list" (s "#'(one two)~%~%") (fmt "# ' ( one two )"))
   (check= "backquote atom number" (s "`123~%~%") (fmt "`123"))
@@ -251,6 +271,7 @@
                        (s "(loop for form in forms~%      do form)")
                        (s "(loop cl-user::for x cl-user::in xs~%)")
                        (s "(loop~%  for it in xs collect it~%)")
+                       (s "(loop~%  for i fixnum from 0 collect i~%)")
                        (s "#'#':#(one two~%)"))))
     (dolist (sample samples)
       (let ((once (fmt sample)))
