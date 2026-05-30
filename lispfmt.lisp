@@ -600,7 +600,10 @@
       (values line-items rest last-node)))
 
 (defun loop-binding-marker-p (node)
-  (loop-keyword-name-in-p node '("for" "as" "with" "and" "named")))
+  (loop-keyword-name-in-p node '("for" "as" "with" "and")))
+
+(defun loop-name-marker-p (node)
+  (loop-keyword-name-in-p node '("named")))
 
 (defun loop-value-marker-p (node)
   (loop-keyword-name-in-p node
@@ -625,6 +628,7 @@
       (loop-body-marker-p node)
       (loop-keyword-name-in-p node
                               '("else" "end" "being" "each" "the"
+                                "with" "and" "for" "as" "named"
                                 "hash-key" "hash-keys" "hash-value"
                                 "hash-values" "symbol" "symbols"
                                 "present-symbol" "present-symbols"
@@ -650,6 +654,8 @@
          (line-items (list (loop-line-item child t)))
          (rest (rest children)))
     (cond
+      ((loop-name-marker-p child)
+       (consume-loop-payload line-items rest))
       ((loop-binding-marker-p child)
        (multiple-value-bind (line-items rest last-node)
            (consume-loop-payload line-items rest)
@@ -712,6 +718,22 @@
             (loop-keyword-text node)
             (format-for-child-line node indent)))))
 
+(defun indent-multiline-string (string indent)
+  (let ((indentation (indent-string indent)))
+    (with-output-to-string (out)
+      (loop for line in (split-lines string)
+            for index from 0
+            do (when (> index 0)
+                 (write-char #\Newline out)
+                 (when (and (plusp (length line))
+                            (not (string-prefix-p indentation line)))
+                   (write-string indentation out)))
+               (write-string line out)))))
+
+(defun rendered-line-needs-context-indent-p (nodes)
+  (and (= (length nodes) 1)
+       (eq (node-kind (loop-line-item-node (first nodes))) :block-comment)))
+
 (defun write-child-lines (children indent out &key loop-style group-keywords previous)
   (loop while children
         do (multiple-value-bind (line-nodes rest last-node)
@@ -728,7 +750,10 @@
                    (progn
                      (write-char #\Newline out)
                      (write-string (indent-string indent) out)))
-               (write-string line out))
+               (write-string (if (rendered-line-needs-context-indent-p line-nodes)
+                                 (indent-multiline-string line indent)
+                                 line)
+                             out))
              (setf previous last-node
                    children rest))))
 

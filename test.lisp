@@ -189,6 +189,14 @@
    "loop typed collision payload"
    (s "(loop~%  :for it fixnum~%  :in xs~%  :collect it~%)~%~%")
    (fmt (s "(loop~%  for it fixnum in xs collect it~%)")))
+  (check=
+   "loop named with"
+   (s "(loop~%  :named scan~%  :with x = 1~%  :collect x~%)~%~%")
+   (fmt (s "(loop~%  named scan with x = 1 collect x~%)")))
+  (check=
+   "loop named for"
+   (s "(loop~%  :named scan~%  :for x~%  :in xs~%  :collect x~%)~%~%")
+   (fmt (s "(loop~%  named scan for x in xs collect x~%)")))
   (check= "prefix hash chain" (s "###one two~%~%") (fmt "# # # one two"))
   (check= "prefix quote list" (s "#'(one two)~%~%") (fmt "# ' ( one two )"))
   (check= "backquote atom number" (s "`123~%~%") (fmt "`123"))
@@ -216,6 +224,14 @@
    "block comment preserves inner indentation"
    (s "#|~%  one~%    two~%|#~%~%")
    (fmt (s "#|  one~%    two|#")))
+  (check=
+   "block comment in list indented"
+   (s "(one~%  #|~%  a~%  b~%  |#~%  two~%)~%~%")
+   (fmt (s "(one~%  #|a~%b|#~%  two~%)")))
+  (check=
+   "nested block comment in list indented"
+   (s "(one~%  #|~%  a~%  #|~%  b~%  |#~%  c~%  |#~%  two~%)~%~%")
+   (fmt "(one #|a#|b|#c|# two)"))
   (check= "cons dot single line" (s "(one . two)~%~%") (fmt "(one . two)"))
   (check=
    "cons dot multiline"
@@ -272,6 +288,8 @@
                        (s "(loop cl-user::for x cl-user::in xs~%)")
                        (s "(loop~%  for it in xs collect it~%)")
                        (s "(loop~%  for i fixnum from 0 collect i~%)")
+                       (s "(loop~%  named scan with x = 1 collect x~%)")
+                       (s "(one #|a#|b|#c|# two)")
                        (s "#'#':#(one two~%)"))))
     (dolist (sample samples)
       (let ((once (fmt sample)))
