@@ -458,6 +458,35 @@
 (defun loop-operator-p (node)
   (atom-text= node "loop"))
 
+(defparameter +loop-keyword-names+
+  '("named" "with" "and" "initially" "finally" "do" "doing" "return"
+    "collect" "collecting" "append" "appending" "nconc" "nconcing"
+    "count" "counting" "sum" "summing" "maximize" "maximizing"
+    "minimize" "minimizing" "into" "if" "when" "unless" "else" "end"
+    "while" "until" "repeat" "always" "never" "thereis" "for" "as"
+    "from" "upfrom" "to" "upto" "below" "by" "downto" "above" "downfrom"
+    "in" "on" "then" "across" "being" "each" "the" "hash-key"
+    "hash-keys" "of" "using" "hash-value" "hash-values" "symbol"
+    "symbols" "present-symbol" "present-symbols" "external-symbol"
+    "external-symbols" "of-type" "it"))
+
+(defun atom-final-name (node)
+  (when (eq (node-kind node) :atom)
+    (let* ((text (node-text node))
+           (colon (position #\: text :from-end t)))
+      (if colon
+          (subseq text (1+ colon))
+          text))))
+
+(defun loop-keyword-atom-p (node)
+  (let ((name (atom-final-name node)))
+    (and name
+         (plusp (length name))
+         (member name +loop-keyword-names+ :test #'string-equal))))
+
+(defun loop-keyword-text (node)
+  (concatenate 'string ":" (atom-final-name node)))
+
 (defun definition-name-p (node)
   (or (member (node-kind node) '(:list :vector))
       (and (eq (node-kind node) :atom)
@@ -536,11 +565,11 @@
 (defun child-line-group (children &key loop-style group-keywords)
   (let ((child (first children)))
     (cond
-      ((and loop-style (keyword-atom-p child))
+      ((and loop-style (loop-keyword-atom-p child))
        (let ((line-nodes (list child))
              (rest (rest children)))
          (loop while (and rest
-                          (not (keyword-atom-p (first rest)))
+                          (not (loop-keyword-atom-p (first rest)))
                           (inline-safe-node-p (first rest)))
                do (push (first rest) line-nodes)
                   (setf rest (rest rest)))
@@ -561,22 +590,41 @@
       (format-inline-children nodes)
       (format-for-child-line (first nodes) indent)))
 
+(defun loop-node-inline-string (node)
+  (if (loop-keyword-atom-p node)
+      (loop-keyword-text node)
+      (node-inline-string node)))
+
+(defun format-loop-child-line (nodes indent)
+  (if (rest nodes)
+      (with-output-to-string (out)
+        (loop for node in nodes
+              for index from 0
+              do (when (> index 0)
+                   (write-char #\Space out))
+                 (write-string (loop-node-inline-string node) out)))
+      (let ((node (first nodes)))
+        (if (loop-keyword-atom-p node)
+            (loop-keyword-text node)
+            (format-for-child-line node indent)))))
+
 (defun write-child-lines (children indent out &key loop-style group-keywords previous)
   (loop while children
         do (multiple-value-bind (line-nodes rest last-node)
                (child-line-group children
                                  :loop-style loop-style
                                  :group-keywords group-keywords)
-             (if (and previous
-                      (= (node-end-line previous) (node-start-line (first children)))
-                      (eq (node-kind (first children)) :line-comment))
-                 (progn
+             (let ((line (if loop-style
+                             (format-loop-child-line line-nodes indent)
+                             (format-child-line line-nodes indent))))
+               (if (and previous
+                        (= (node-end-line previous) (node-start-line (first children)))
+                        (eq (node-kind (first children)) :line-comment))
                    (write-char #\Space out)
-                   (write-string (format-child-line line-nodes indent) out))
-                 (progn
-                   (write-char #\Newline out)
-                   (write-string (indent-string indent) out)
-                   (write-string (format-child-line line-nodes indent) out)))
+                   (progn
+                     (write-char #\Newline out)
+                     (write-string (indent-string indent) out)))
+               (write-string line out))
              (setf previous last-node
                    children rest))))
 
@@ -638,6 +686,21 @@
                  (write-char #\Newline out)
                  (write-string (indent-string indent) out)
                  (write-string close out))))))
+      ((and (eq (node-kind node) :list)
+            (loop-operator-p (first children)))
+       (with-output-to-string (out)
+         (write-string open-token out)
+         (let ((previous (first children))
+               (remaining (rest children)))
+           (write-string (format-node previous (+ indent (length open-token))) out)
+           (write-child-lines remaining
+                              (+ indent +indent+)
+                              out
+                              :loop-style t
+                              :previous previous))
+         (write-char #\Newline out)
+         (write-string (indent-string indent) out)
+         (write-string close out)))
       ((and (eq (node-kind node) :list)
             (not (has-standalone-line-comment-p children))
             (callable-atom-p (first children)))

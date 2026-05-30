@@ -125,6 +125,38 @@
    "loop keyword clauses"
    (s "(loop~%  :from 0~%  :for previous = nil~%  :then form~%  :do ...~%)~%~%")
    (fmt (s "(loop~%  :from 0 :for previous = nil :then form :do ...~%)")))
+  (check=
+   "loop bare keywords normalized"
+   (s "(loop~%  :for form~%  :in forms~%  :for gap~%  :in gaps~%  :for index~%  :from 0~%  :for previous = nil~%  :then form~%  :do~%  ; elided~%)~%~%")
+   (fmt (s "(loop for form in forms~%      for gap in gaps~%      for index from 0~%      for previous = nil then form~%      do~%      ; elided~%)")))
+  (check=
+   "loop package keyword normalized"
+   (s "(loop~%  :for x~%  :in xs~%)~%~%")
+   (fmt (s "(loop cl-user::for x cl-user::in xs~%)")))
+  (check=
+   "loop uppercase keyword normalized"
+   (s "(loop~%  :FOR x~%  :IN xs~%)~%~%")
+   (fmt (s "(loop FOR x IN xs~%)")))
+  (check=
+   "loop with and collect into normalized"
+   (s "(loop~%  :with x = 1~%  :and y = 2~%  :collect x~%  :into xs~%)~%~%")
+   (fmt (s "(loop with x = 1 and y = 2 collect x into xs~%)")))
+  (check=
+   "loop when else end normalized"
+   (s "(loop~%  :when ready~%  :collect x~%  :else~%  :collect y~%  :end~%)~%~%")
+   (fmt (s "(loop when ready collect x else collect y end~%)")))
+  (check=
+   "loop hash clauses normalized"
+   (s "(loop~%  :for k~%  :being~%  :the~%  :hash-keys~%  :of table~%  :using value~%)~%~%")
+   (fmt (s "(loop for k being the hash-keys of table using value~%)")))
+  (check=
+   "loop initially finally normalized"
+   (s "(loop~%  :initially (setup)~%  :finally (finish)~%)~%~%")
+   (fmt (s "(loop initially (setup) finally (finish)~%)")))
+  (check=
+   "loop nested payload not normalized"
+   (s "(loop~%  :for x~%  :in (list for in collect)~%  :collect (make for)~%)~%~%")
+   (fmt (s "(loop for x in (list for in collect) collect (make for)~%)")))
   (check= "prefix hash chain" (s "###one two~%~%") (fmt "# # # one two"))
   (check= "prefix quote list" (s "#'(one two)~%~%") (fmt "# ' ( one two )"))
   (check= "backquote atom number" (s "`123~%~%") (fmt "`123"))
@@ -204,6 +236,8 @@
                        (s "(dict~%  :one 10 :two 20 :three 30~%)")
                        (s "(dict~%  :one :two :three :four~%)")
                        (s "(loop~%  :from 0 :for previous = nil :then form :do ...~%)")
+                       (s "(loop for form in forms~%      do form)")
+                       (s "(loop cl-user::for x cl-user::in xs~%)")
                        (s "#'#':#(one two~%)"))))
     (dolist (sample samples)
       (let ((once (fmt sample)))
