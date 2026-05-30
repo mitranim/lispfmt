@@ -1,0 +1,9 @@
+*
+!/readme.md
+
+# Must be listed LAST.
+.*
+!.git*
+!*config
+!*ignore
+!*rc
