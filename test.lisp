@@ -157,6 +157,18 @@
    "loop nested payload not normalized"
    (s "(loop~%  :for x~%  :in (list for in collect)~%  :collect (make for)~%)~%~%")
    (fmt (s "(loop for x in (list for in collect) collect (make for)~%)")))
+  (check=
+   "loop it payload not normalized"
+   (s "(loop~%  :for it~%  :in xs~%  :collect it~%)~%~%")
+   (fmt (s "(loop~%  for it in xs collect it~%)")))
+  (check=
+   "loop named payload not normalized"
+   (s "(loop~%  :for named~%  :in xs~%  :collect named~%)~%~%")
+   (fmt (s "(loop~%  for named in xs collect named~%)")))
+  (check=
+   "loop for payload not normalized"
+   (s "(loop~%  :for for~%  :in xs~%  :collect for~%)~%~%")
+   (fmt (s "(loop~%  for for in xs collect for~%)")))
   (check= "prefix hash chain" (s "###one two~%~%") (fmt "# # # one two"))
   (check= "prefix quote list" (s "#'(one two)~%~%") (fmt "# ' ( one two )"))
   (check= "backquote atom number" (s "`123~%~%") (fmt "`123"))
@@ -238,6 +250,7 @@
                        (s "(loop~%  :from 0 :for previous = nil :then form :do ...~%)")
                        (s "(loop for form in forms~%      do form)")
                        (s "(loop cl-user::for x cl-user::in xs~%)")
+                       (s "(loop~%  for it in xs collect it~%)")
                        (s "#'#':#(one two~%)"))))
     (dolist (sample samples)
       (let ((once (fmt sample)))

@@ -487,6 +487,10 @@
 (defun loop-keyword-text (node)
   (concatenate 'string ":" (atom-final-name node)))
 
+(defun loop-keyword-name-in-p (node names)
+  (let ((node-name (atom-final-name node)))
+    (and node-name (member node-name names :test #'string-equal))))
+
 (defun definition-name-p (node)
   (or (member (node-kind node) '(:list :vector))
       (and (eq (node-kind node) :atom)
@@ -562,19 +566,82 @@
       (format-list-node node indent :force-multiline t)
       (format-node node indent)))
 
+(defun loop-line-item (node rewrite-p)
+  (cons node rewrite-p))
+
+(defun loop-line-item-node (item)
+  (if (consp item) (car item) item))
+
+(defun loop-line-item-rewrite-p (item)
+  (and (consp item) (cdr item)))
+
+(defun consume-loop-payload (line-items rest)
+  (if rest
+      (values (append line-items (list (loop-line-item (first rest) nil)))
+              (rest rest)
+              (first rest))
+      (values line-items rest (loop-line-item-node (first (last line-items))))))
+
+(defun consume-loop-assignment (line-items rest last-node)
+  (if (and rest
+           (atom-text= (first rest) "="))
+      (multiple-value-bind (line-items rest last-node)
+          (consume-loop-payload
+           (append line-items (list (loop-line-item (first rest) nil)))
+           (rest rest))
+        (values line-items rest last-node))
+      (values line-items rest last-node)))
+
+(defun loop-binding-marker-p (node)
+  (loop-keyword-name-in-p node '("for" "as" "with" "and" "named")))
+
+(defun loop-value-marker-p (node)
+  (loop-keyword-name-in-p node
+                          '("in" "on" "from" "upfrom" "to" "upto" "below"
+                            "by" "downto" "above" "downfrom" "then" "across"
+                            "of" "using" "into")))
+
+(defun loop-action-marker-p (node)
+  (loop-keyword-name-in-p node
+                          '("collect" "collecting" "append" "appending"
+                            "nconc" "nconcing" "count" "counting" "sum"
+                            "summing" "maximize" "maximizing" "minimize"
+                            "minimizing" "return" "while" "until" "repeat"
+                            "always" "never" "thereis" "if" "when" "unless")))
+
+(defun loop-body-marker-p (node)
+  (loop-keyword-name-in-p node '("do" "doing" "initially" "finally")))
+
+(defun consume-loop-line-group (children)
+  (let* ((child (first children))
+         (line-items (list (loop-line-item child t)))
+         (rest (rest children)))
+    (cond
+      ((loop-binding-marker-p child)
+       (multiple-value-bind (line-items rest last-node)
+           (consume-loop-payload line-items rest)
+         (consume-loop-assignment line-items rest last-node)))
+      ((or (loop-value-marker-p child)
+           (loop-action-marker-p child))
+       (consume-loop-payload line-items rest))
+      ((loop-body-marker-p child)
+       (let ((last-node child))
+         (loop while (and rest
+                          (not (loop-keyword-atom-p (first rest)))
+                          (inline-safe-node-p (first rest)))
+               do (setf last-node (first rest)
+                        line-items (append line-items
+                                           (list (loop-line-item (first rest) nil)))
+                        rest (rest rest)))
+         (values line-items rest last-node)))
+      (t
+       (values line-items rest child)))))
+
 (defun child-line-group (children &key loop-style group-keywords)
   (let ((child (first children)))
     (cond
       ((and loop-style (loop-keyword-atom-p child))
-       (let ((line-nodes (list child))
-             (rest (rest children)))
-         (loop while (and rest
-                          (not (loop-keyword-atom-p (first rest)))
-                          (inline-safe-node-p (first rest)))
-               do (push (first rest) line-nodes)
-                  (setf rest (rest rest)))
-         (let ((line-nodes (nreverse line-nodes)))
-           (values line-nodes rest (first (last line-nodes))))))
+       (consume-loop-line-group children))
       ((and group-keywords
             (keyword-atom-p child)
             (second children)
@@ -590,21 +657,23 @@
       (format-inline-children nodes)
       (format-for-child-line (first nodes) indent)))
 
-(defun loop-node-inline-string (node)
-  (if (loop-keyword-atom-p node)
-      (loop-keyword-text node)
-      (node-inline-string node)))
+(defun loop-line-item-inline-string (item)
+  (let ((node (loop-line-item-node item)))
+    (if (loop-line-item-rewrite-p item)
+        (loop-keyword-text node)
+        (node-inline-string node))))
 
-(defun format-loop-child-line (nodes indent)
-  (if (rest nodes)
+(defun format-loop-child-line (items indent)
+  (if (rest items)
       (with-output-to-string (out)
-        (loop for node in nodes
+        (loop for item in items
               for index from 0
               do (when (> index 0)
                    (write-char #\Space out))
-                 (write-string (loop-node-inline-string node) out)))
-      (let ((node (first nodes)))
-        (if (loop-keyword-atom-p node)
+                 (write-string (loop-line-item-inline-string item) out)))
+      (let* ((item (first items))
+             (node (loop-line-item-node item)))
+        (if (loop-line-item-rewrite-p item)
             (loop-keyword-text node)
             (format-for-child-line node indent)))))
 
