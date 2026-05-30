@@ -101,6 +101,12 @@
    (fmt (s "(notdef name~%args~%body)")))
   (check= "prefix hash chain" (s "###one two~%~%") (fmt "# # # one two"))
   (check= "prefix quote list" (s "#'(one two)~%~%") (fmt "# ' ( one two )"))
+  (check= "backquote atom number" (s "`123~%~%") (fmt "`123"))
+  (check= "backquote atom symbol" (s "`one~%~%") (fmt "`one"))
+  (check= "backquote string" (s "`\"str\"~%~%") (fmt "` \"str\""))
+  (check= "backquote list" (s "`(one two)~%~%") (fmt "`(one two)"))
+  (check= "backquote newline list" (s "`(one two)~%~%") (fmt (s "`~%(one two)")))
+  (check= "hash backquote list" (s "#`(one two)~%~%") (fmt "# ` (one two)"))
   (check= "datum comment prefix atom" (s "#;one~%~%") (fmt "# ; one"))
   (check= "datum comment prefix list" (s "#;(one two)~%~%") (fmt "# ; ( one two )"))
   (check= "feature prefix plus atom" (s "#+one~%~%") (fmt "# + one"))
@@ -159,6 +165,9 @@
                        "#|one#|two|#three|#"
                        "# + one"
                        "# - one"
+                       "` \"str\""
+                       (s "`~%(one two)")
+                       "# ` (one two)"
                        "# \\ space"
                        (s "#|  one~%    two|#")
                        (s "(defmacro with-thing (x)~%body)")

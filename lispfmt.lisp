@@ -213,7 +213,7 @@
          ((starts-with-p p "#|") nil)
          ((starts-with-p p "#\\") nil)
          (t "#")))
-      ((member ch '(#\' #\,) :test #'char=)
+      ((member ch '(#\' #\` #\,) :test #'char=)
        (string ch))
       ((and have-prefix (member ch '(#\+ #\- #\\) :test #'char=))
        (string ch))
@@ -260,7 +260,10 @@
                      :text prefix
                      :children (list child)
                      :start-line start-line
-                     :end-line (node-end-line child)
+                     :end-line (if (and (member (node-kind child) '(:list :vector))
+                                        (= (node-start-line child) (node-end-line child)))
+                                   start-line
+                                   (node-end-line child))
                      :start-col start-col))))))
 
 (defun parse-list (p &optional prefix start-line start-col)
@@ -304,9 +307,13 @@
     (when prefix
       (let ((child (first (node-children prefix))))
         (when (and child (member (node-kind child) '(:list :vector)))
-          (setf (node-prefix child) (concatenate 'string (node-text prefix) (or (node-prefix child) ""))
-                (node-start-line child) (node-start-line prefix)
-                (node-start-col child) (node-start-col prefix))
+          (let ((child-single-line-p (= (node-start-line child) (node-end-line child))))
+            (setf (node-prefix child) (concatenate 'string (node-text prefix) (or (node-prefix child) ""))
+                  (node-start-line child) (node-start-line prefix)
+                  (node-end-line child) (if child-single-line-p
+                                            (node-start-line prefix)
+                                            (node-end-line child))
+                  (node-start-col child) (node-start-col prefix)))
           (when (and (plusp (length (node-prefix child)))
                      (char= (char (node-prefix child)
                                   (1- (length (node-prefix child))))
