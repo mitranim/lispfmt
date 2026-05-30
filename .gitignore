@@ -1,5 +1,10 @@
 *
 !/readme.md
+!/lispfmt.asd
+!/src/
+!/src/**
+!/tests/
+!/tests/**
 
 # Must be listed LAST.
 .*
