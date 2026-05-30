@@ -7,198 +7,249 @@
 
 (defun fail (name expected actual)
   (incf *failures*)
-  (format t "~&FAIL: ~A~%Expected:~%~S~%Actual:~%~S~2%" name expected actual))
+  (format t "~&FAIL: ~A~%Expected:~%~S~%Actual:~%~S~2%" name expected actual)
+)
 
 (defun check= (name expected actual)
-  (unless (string= expected actual)
-    (fail name expected actual)))
+  (unless
+    (string= expected actual)
+    (fail name expected actual)
+  )
+)
 
 (defun check-error (name thunk)
   (handler-case
-      (progn
-        (funcall thunk)
-        (incf *failures*)
-        (format t "~&FAIL: ~A~%Expected an error.~2%" name))
-    (lispfmt:formatter-error (condition)
+    (progn
+      (funcall thunk)
+      (incf *failures*)
+      (format t "~&FAIL: ~A~%Expected an error.~2%" name)
+    )
+    (lispfmt:formatter-error
+      (condition)
       (declare (ignore condition))
-      t)))
+      t
+    )
+  )
+)
 
-(defun fmt (string)
-  (lispfmt:format-string string))
+(defun fmt (string) (lispfmt:format-string string))
 
-(defun s (control &rest args)
-  (apply #'format nil control args))
+(defun s (control &rest args) (apply #'format nil control args))
 
 (defun run-tests ()
   (setf *failures* 0)
   (check= "empty input" "" (fmt ""))
   (check= "whitespace input" "" (fmt (s "  ~%~%  ")))
   (check=
-   "structured editing example"
-   (s "(defun some-func ()~%  (let~%    (~%      (one 10)~%      (two 20)~%    )~%    (print (+ one two))~%    (print (+ two one))~%  )~%)~%")
-   (fmt (s "(defun some-func ()~%  (let ((one 10) (two 20))~%    (print (+ one two))~%    (print (+ two one))))")))
+    "structured editing example"
+    (s "(defun some-func ()~%  (let~%    (~%      (one 10)~%      (two 20)~%    )~%    (print (+ one two))~%    (print (+ two one))~%  )~%)~%")
+    (fmt (s "(defun some-func ()~%  (let ((one 10) (two 20))~%    (print (+ one two))~%    (print (+ two one))))"))
+  )
   (check=
-   "definition macro shape"
-   (s "(defmacro with-thing (x) body)~%")
-   (fmt (s "(defmacro with-thing (x)~%body)")))
+    "definition macro shape"
+    (s "(defmacro with-thing (x) body)~%")
+    (fmt (s "(defmacro with-thing (x)~%body)"))
+  )
   (check=
-   "definition variable shape"
-   (s "(defvar *x* 10)~%")
-   (fmt (s "(defvar *x*~%10)")))
+    "definition variable shape"
+    (s "(defvar *x* 10)~%")
+    (fmt (s "(defvar *x*~%10)"))
+  )
   (check=
-   "definition parameter shape"
-   (s "(defparameter *x* 10)~%")
-   (fmt (s "(defparameter *x*~%10)")))
+    "definition parameter shape"
+    (s "(defparameter *x* 10)~%")
+    (fmt (s "(defparameter *x*~%10)"))
+  )
   (check=
-   "definition class shape"
-   (s "(defclass thing ()~%  ((slot :initarg :slot))~%)~%")
-   (fmt (s "(defclass thing ()~%((slot :initarg :slot)))")))
+    "definition class shape"
+    (s "(defclass thing ()~%  ((slot :initarg :slot))~%)~%")
+    (fmt (s "(defclass thing ()~%((slot :initarg :slot)))"))
+  )
   (check=
-   "definition method qualifier conservative shape"
-   (s "(defmethod render~%  :around~%  ((x thing))~%  body~%)~%")
-   (fmt (s "(defmethod render~%:around~%((x thing))~%body)")))
+    "definition method qualifier conservative shape"
+    (s "(defmethod render~%  :around~%  ((x thing))~%  body~%)~%")
+    (fmt (s "(defmethod render~%:around~%((x thing))~%body)"))
+  )
   (check=
-   "definition condition shape"
-   (s "(define-condition bad-thing (error)~%  ((reason :initarg :reason))~%)~%")
-   (fmt (s "(define-condition bad-thing (error)~%((reason :initarg :reason)))")))
+    "definition condition shape"
+    (s "(define-condition bad-thing (error)~%  ((reason :initarg :reason))~%)~%")
+    (fmt (s "(define-condition bad-thing (error)~%((reason :initarg :reason)))"))
+  )
   (check=
-   "definition struct shape"
-   (s "(defstruct point~%  x~%  y~%)~%")
-   (fmt (s "(defstruct point~%x~%y)")))
+    "definition struct shape"
+    (s "(defstruct point~%  x~%  y~%)~%")
+    (fmt (s "(defstruct point~%x~%y)"))
+  )
   (check=
-   "scheme define function shape"
-   (s "(define (square x) (* x x))~%")
-   (fmt (s "(define (square x)~%(* x x))")))
+    "scheme define function shape"
+    (s "(define (square x) (* x x))~%")
+    (fmt (s "(define (square x)~%(* x x))"))
+  )
   (check=
-   "scheme define variable shape"
-   (s "(define pi 3.14)~%")
-   (fmt (s "(define pi~%3.14)")))
+    "scheme define variable shape"
+    (s "(define pi 3.14)~%")
+    (fmt (s "(define pi~%3.14)"))
+  )
   (check=
-   "scheme define inline-safe body"
-   (s "(define my-var (+ one two))~%")
-   (fmt (s "(define~%  my-var~%  (+ one two)~%)")))
+    "scheme define inline-safe body"
+    (s "(define my-var (+ one two))~%")
+    (fmt (s "(define~%  my-var~%  (+ one two)~%)"))
+  )
   (check=
-   "scheme define preserves multiline body"
-   (s "(define my-var~%  (+~%    one~%    two~%  )~%)~%")
-   (fmt (s "(define~%  my-var~%  (+ one~%    two~%  )~%)")))
+    "scheme define preserves multiline body"
+    (s "(define my-var~%  (+~%    one~%    two~%  )~%)~%")
+    (fmt (s "(define~%  my-var~%  (+ one~%    two~%  )~%)"))
+  )
   (check=
-   "scheme define-syntax shape"
-   (s "(define-syntax when transformer)~%")
-   (fmt (s "(define-syntax when~%transformer)")))
+    "scheme define-syntax shape"
+    (s "(define-syntax when transformer)~%")
+    (fmt (s "(define-syntax when~%transformer)"))
+  )
   (check=
-   "scheme define-record-type shape"
-   (s "(define-record-type point~%  constructor~%  predicate~%)~%")
-   (fmt (s "(define-record-type point~%constructor~%predicate)")))
+    "scheme define-record-type shape"
+    (s "(define-record-type point~%  constructor~%  predicate~%)~%")
+    (fmt (s "(define-record-type point~%constructor~%predicate)"))
+  )
   (check=
-   "definition keyword false positive"
-   (s "(def~%  :keyword~%  value~%)~%")
-   (fmt (s "(def~%:keyword~%value)")))
+    "definition keyword false positive"
+    (s "(def~%  :keyword~%  value~%)~%")
+    (fmt (s "(def~%:keyword~%value)"))
+  )
   (check=
-   "definition numeric false positive"
-   (s "(deft~%  123~%  body~%)~%")
-   (fmt (s "(deft~%123~%body)")))
+    "definition numeric false positive"
+    (s "(deft~%  123~%  body~%)~%")
+    (fmt (s "(deft~%123~%body)"))
+  )
   (check=
-   "definition prefix false positive"
-   (s "(notdef~%  name~%  args~%  body~%)~%")
-   (fmt (s "(notdef name~%args~%body)")))
-  (check= "keyword pairs single line unchanged"
-          (s "(dict :one 10 :two 20 :three 30)~%")
-          (fmt "(dict :one 10 :two 20 :three 30)"))
+    "definition prefix false positive"
+    (s "(notdef~%  name~%  args~%  body~%)~%")
+    (fmt (s "(notdef name~%args~%body)"))
+  )
   (check=
-   "keyword pairs multiline"
-   (s "(dict~%  :one 10~%  :two 20~%  :three 30~%)~%")
-   (fmt (s "(dict~%  :one 10 :two 20 :three 30~%)")))
-  (check= "keyword-only pairs single line unchanged"
-          (s "(dict :one :two :three :four)~%")
-          (fmt "(dict :one :two :three :four)"))
+    "keyword pairs single line unchanged"
+    (s "(dict :one 10 :two 20 :three 30)~%")
+    (fmt "(dict :one 10 :two 20 :three 30)")
+  )
   (check=
-   "keyword-only pairs multiline"
-   (s "(dict~%  :one :two~%  :three :four~%)~%")
-   (fmt (s "(dict~%  :one :two :three :four~%)")))
+    "keyword pairs multiline"
+    (s "(dict~%  :one 10~%  :two 20~%  :three 30~%)~%")
+    (fmt (s "(dict~%  :one 10 :two 20 :three 30~%)"))
+  )
   (check=
-   "keyword missing value"
-   (s "(dict~%  :one 10~%  :two~%)~%")
-   (fmt (s "(dict~%  :one 10 :two~%)")))
+    "keyword-only pairs single line unchanged"
+    (s "(dict :one :two :three :four)~%")
+    (fmt "(dict :one :two :three :four)")
+  )
   (check=
-   "keyword multiline value guard"
-   (s "(dict~%  :one~%  (value~%    one~%    two~%  )~%)~%")
-   (fmt (s "(dict~%  :one (value one~%    two~%  )~%)")))
+    "keyword-only pairs multiline"
+    (s "(dict~%  :one :two~%  :three :four~%)~%")
+    (fmt (s "(dict~%  :one :two :three :four~%)"))
+  )
   (check=
-   "loop keyword clauses"
-   (s "(loop~%  :from 0~%  :for previous = nil~%  :then form~%  :do ...~%)~%")
-   (fmt (s "(loop~%  :from 0 :for previous = nil :then form :do ...~%)")))
+    "keyword missing value"
+    (s "(dict~%  :one 10~%  :two~%)~%")
+    (fmt (s "(dict~%  :one 10 :two~%)"))
+  )
   (check=
-   "loop bare keywords normalized"
-   (s "(loop~%  :for form~%  :in forms~%  :for gap~%  :in gaps~%  :for index~%  :from 0~%  :for previous = nil~%  :then form~%  :do~%  ; elided~%)~%")
-   (fmt (s "(loop for form in forms~%      for gap in gaps~%      for index from 0~%      for previous = nil then form~%      do~%      ; elided~%)")))
+    "keyword multiline value guard"
+    (s "(dict~%  :one~%  (value~%    one~%    two~%  )~%)~%")
+    (fmt (s "(dict~%  :one (value one~%    two~%  )~%)"))
+  )
   (check=
-   "loop package keyword normalized"
-   (s "(loop~%  :for x~%  :in xs~%)~%")
-   (fmt (s "(loop cl-user::for x cl-user::in xs~%)")))
+    "loop keyword clauses"
+    (s "(loop~%  :from 0~%  :for previous = nil~%  :then form~%  :do ...~%)~%")
+    (fmt (s "(loop~%  :from 0 :for previous = nil :then form :do ...~%)"))
+  )
   (check=
-   "loop uppercase keyword normalized"
-   (s "(loop~%  :FOR x~%  :IN xs~%)~%")
-   (fmt (s "(loop FOR x IN xs~%)")))
+    "loop bare keywords normalized"
+    (s "(loop~%  :for form~%  :in forms~%  :for gap~%  :in gaps~%  :for index~%  :from 0~%  :for previous = nil~%  :then form~%  :do~%  ; elided~%)~%")
+    (fmt (s "(loop for form in forms~%      for gap in gaps~%      for index from 0~%      for previous = nil then form~%      do~%      ; elided~%)"))
+  )
   (check=
-   "loop with and collect into normalized"
-   (s "(loop~%  :with x = 1~%  :and y = 2~%  :collect x~%  :into xs~%)~%")
-   (fmt (s "(loop with x = 1 and y = 2 collect x into xs~%)")))
+    "loop package keyword normalized"
+    (s "(loop~%  :for x~%  :in xs~%)~%")
+    (fmt (s "(loop cl-user::for x cl-user::in xs~%)"))
+  )
   (check=
-   "loop when else end normalized"
-   (s "(loop~%  :when ready~%  :collect x~%  :else~%  :collect y~%  :end~%)~%")
-   (fmt (s "(loop when ready collect x else collect y end~%)")))
+    "loop uppercase keyword normalized"
+    (s "(loop~%  :FOR x~%  :IN xs~%)~%")
+    (fmt (s "(loop FOR x IN xs~%)"))
+  )
   (check=
-   "loop hash clauses normalized"
-   (s "(loop~%  :for k~%  :being~%  :the~%  :hash-keys~%  :of table~%  :using value~%)~%")
-   (fmt (s "(loop for k being the hash-keys of table using value~%)")))
+    "loop with and collect into normalized"
+    (s "(loop~%  :with x = 1~%  :and y = 2~%  :collect x~%  :into xs~%)~%")
+    (fmt (s "(loop with x = 1 and y = 2 collect x into xs~%)"))
+  )
   (check=
-   "loop initially finally normalized"
-   (s "(loop~%  :initially (setup)~%  :finally (finish)~%)~%")
-   (fmt (s "(loop initially (setup) finally (finish)~%)")))
+    "loop when else end normalized"
+    (s "(loop~%  :when ready~%  :collect x~%  :else~%  :collect y~%  :end~%)~%")
+    (fmt (s "(loop when ready collect x else collect y end~%)"))
+  )
   (check=
-   "loop nested payload not normalized"
-   (s "(loop~%  :for x~%  :in (list for in collect)~%  :collect (make for)~%)~%")
-   (fmt (s "(loop for x in (list for in collect) collect (make for)~%)")))
+    "loop hash clauses normalized"
+    (s "(loop~%  :for k~%  :being~%  :the~%  :hash-keys~%  :of table~%  :using value~%)~%")
+    (fmt (s "(loop for k being the hash-keys of table using value~%)"))
+  )
   (check=
-   "loop it payload not normalized"
-   (s "(loop~%  :for it~%  :in xs~%  :collect it~%)~%")
-   (fmt (s "(loop~%  for it in xs collect it~%)")))
+    "loop initially finally normalized"
+    (s "(loop~%  :initially (setup)~%  :finally (finish)~%)~%")
+    (fmt (s "(loop initially (setup) finally (finish)~%)"))
+  )
   (check=
-   "loop named payload not normalized"
-   (s "(loop~%  :for named~%  :in xs~%  :collect named~%)~%")
-   (fmt (s "(loop~%  for named in xs collect named~%)")))
+    "loop nested payload not normalized"
+    (s "(loop~%  :for x~%  :in (list for in collect)~%  :collect (make for)~%)~%")
+    (fmt (s "(loop for x in (list for in collect) collect (make for)~%)"))
+  )
   (check=
-   "loop for payload not normalized"
-   (s "(loop~%  :for for~%  :in xs~%  :collect for~%)~%")
-   (fmt (s "(loop~%  for for in xs collect for~%)")))
+    "loop it payload not normalized"
+    (s "(loop~%  :for it~%  :in xs~%  :collect it~%)~%")
+    (fmt (s "(loop~%  for it in xs collect it~%)"))
+  )
   (check=
-   "loop typed with assignment"
-   (s "(loop~%  :with x fixnum = 1~%  :collect x~%)~%")
-   (fmt (s "(loop~%  with x fixnum = 1 collect x~%)")))
+    "loop named payload not normalized"
+    (s "(loop~%  :for named~%  :in xs~%  :collect named~%)~%")
+    (fmt (s "(loop~%  for named in xs collect named~%)"))
+  )
   (check=
-   "loop with assignment"
-   (s "(loop~%  :with x = 1~%  :collect x~%)~%")
-   (fmt (s "(loop~%  with x = 1 collect x~%)")))
+    "loop for payload not normalized"
+    (s "(loop~%  :for for~%  :in xs~%  :collect for~%)~%")
+    (fmt (s "(loop~%  for for in xs collect for~%)"))
+  )
   (check=
-   "loop typed for from"
-   (s "(loop~%  :for i fixnum~%  :from 0~%  :collect i~%)~%")
-   (fmt (s "(loop~%  for i fixnum from 0 collect i~%)")))
+    "loop typed with assignment"
+    (s "(loop~%  :with x fixnum = 1~%  :collect x~%)~%")
+    (fmt (s "(loop~%  with x fixnum = 1 collect x~%)"))
+  )
   (check=
-   "loop of-type for"
-   (s "(loop~%  :for x :of-type fixnum~%  :in xs~%  :collect x~%)~%")
-   (fmt (s "(loop~%  for x of-type fixnum in xs collect x~%)")))
+    "loop with assignment"
+    (s "(loop~%  :with x = 1~%  :collect x~%)~%")
+    (fmt (s "(loop~%  with x = 1 collect x~%)"))
+  )
   (check=
-   "loop typed collision payload"
-   (s "(loop~%  :for it fixnum~%  :in xs~%  :collect it~%)~%")
-   (fmt (s "(loop~%  for it fixnum in xs collect it~%)")))
+    "loop typed for from"
+    (s "(loop~%  :for i fixnum~%  :from 0~%  :collect i~%)~%")
+    (fmt (s "(loop~%  for i fixnum from 0 collect i~%)"))
+  )
   (check=
-   "loop named with"
-   (s "(loop~%  :named scan~%  :with x = 1~%  :collect x~%)~%")
-   (fmt (s "(loop~%  named scan with x = 1 collect x~%)")))
+    "loop of-type for"
+    (s "(loop~%  :for x :of-type fixnum~%  :in xs~%  :collect x~%)~%")
+    (fmt (s "(loop~%  for x of-type fixnum in xs collect x~%)"))
+  )
   (check=
-   "loop named for"
-   (s "(loop~%  :named scan~%  :for x~%  :in xs~%  :collect x~%)~%")
-   (fmt (s "(loop~%  named scan for x in xs collect x~%)")))
+    "loop typed collision payload"
+    (s "(loop~%  :for it fixnum~%  :in xs~%  :collect it~%)~%")
+    (fmt (s "(loop~%  for it fixnum in xs collect it~%)"))
+  )
+  (check=
+    "loop named with"
+    (s "(loop~%  :named scan~%  :with x = 1~%  :collect x~%)~%")
+    (fmt (s "(loop~%  named scan with x = 1 collect x~%)"))
+  )
+  (check=
+    "loop named for"
+    (s "(loop~%  :named scan~%  :for x~%  :in xs~%  :collect x~%)~%")
+    (fmt (s "(loop~%  named scan for x in xs collect x~%)"))
+  )
   (check= "prefix hash chain" (s "###one two~%") (fmt "# # # one two"))
   (check= "prefix quote list" (s "#'(one two)~%") (fmt "# ' ( one two )"))
   (check= "backquote atom number" (s "`123~%") (fmt "`123"))
@@ -215,89 +266,86 @@
   (check= "fuzzy character literal single char" (s "#\\A~%") (fmt "# \\ A"))
   (check= "fuzzy character literal named char" (s "#\\space~%") (fmt "# \\ space"))
   (check=
-   "prefix separated from block comment"
-   (s "#':~%#|~%one~%|#~%")
-   (fmt "# ' : #|one|#"))
+    "prefix separated from block comment"
+    (s "#':~%#|~%one~%|#~%")
+    (fmt "# ' : #|one|#")
+  )
   (check=
-   "nested block comment"
-   (s "#|~%one~%#|~%two~%|#~%three~%|#~%")
-   (fmt "#|one#|two|#three|#"))
+    "nested block comment"
+    (s "#|~%one~%#|~%two~%|#~%three~%|#~%")
+    (fmt "#|one#|two|#three|#")
+  )
   (check=
-   "block comment preserves inner indentation"
-   (s "#|~%  one~%    two~%|#~%")
-   (fmt (s "#|  one~%    two|#")))
+    "block comment preserves inner indentation"
+    (s "#|~%  one~%    two~%|#~%")
+    (fmt (s "#|  one~%    two|#"))
+  )
   (check=
-   "block comment in list indented"
-   (s "(one~%  #|~%  a~%  b~%  |#~%  two~%)~%")
-   (fmt (s "(one~%  #|a~%b|#~%  two~%)")))
+    "block comment in list indented"
+    (s "(one~%  #|~%  a~%  b~%  |#~%  two~%)~%")
+    (fmt (s "(one~%  #|a~%b|#~%  two~%)"))
+  )
   (check=
-   "nested block comment in list indented"
-   (s "(one~%  #|~%  a~%  #|~%  b~%  |#~%  c~%  |#~%  two~%)~%")
-   (fmt "(one #|a#|b|#c|# two)"))
+    "nested block comment in list indented"
+    (s "(one~%  #|~%  a~%  #|~%  b~%  |#~%  c~%  |#~%  two~%)~%")
+    (fmt "(one #|a#|b|#c|# two)")
+  )
   (check= "cons dot single line" (s "(one . two)~%") (fmt "(one . two)"))
   (check=
-   "cons dot multiline"
-   (s "(one~%  .~%  two~%)~%")
-   (fmt (s "(one .~%two)")))
+    "cons dot multiline"
+    (s "(one~%  .~%  two~%)~%")
+    (fmt (s "(one .~%two)"))
+  )
   (check=
-   "line comment trailing"
-   (s "(one ; two~%)~%")
-   (fmt (s "(~%one ; two~%)")))
+    "line comment trailing"
+    (s "(one ; two~%)~%")
+    (fmt (s "(~%one ; two~%)"))
+  )
   (check=
-   "line comment standalone"
-   (s "(~%  one~%  ; two~%)~%")
-   (fmt (s "(~%one~%; two~%)")))
+    "line comment standalone"
+    (s "(~%  one~%  ; two~%)~%")
+    (fmt (s "(~%one~%; two~%)"))
+  )
   (check=
-   "vector multiline"
-   (s "#(~%  one~%  two~%  three~%)~%")
-   (fmt (s "#(one two~%three~%)")))
+    "vector multiline"
+    (s "#(~%  one~%  two~%  three~%)~%")
+    (fmt (s "#(one two~%three~%)"))
+  )
   (check=
-   "quoted list multiline"
-   (s "'(one~%  two~%  three~%)~%")
-   (fmt (s "'(one two~%three~%)")))
+    "quoted list multiline"
+    (s "'(one~%  two~%  three~%)~%")
+    (fmt (s "'(one two~%three~%)"))
+  )
   (check=
-   "full opening token alignment"
-   (s "#'#':#(~%  one~%  two~%)~%")
-   (fmt (s "#'#':#(one two~%)")))
+    "full opening token alignment"
+    (s "#'#':#(~%  one~%  two~%)~%")
+    (fmt (s "#'#':#(one two~%)"))
+  )
   (check=
-   "multiline string closing quote column zero"
-   (s "(print \"one~%two~%\"~%)~%")
-   (fmt (s "(print \"one~%two~%  \"~%)")))
+    "multiline string closing quote column zero"
+    (s "(print \"one~%two~%\"~%)~%")
+    (fmt (s "(print \"one~%two~%  \"~%)"))
+  )
   (check= "blank lines trimmed" (s "one~%~%two~%") (fmt (s "one~%~%~%~%two")))
   (check-error "mismatched delimiter" (lambda () (fmt "(]")))
   (check-error "unexpected close" (lambda () (fmt ")")))
   (check-error "whitespace after character literal" (lambda () (fmt "#\\ ")))
   (check-error "fuzzy character literal missing char" (lambda () (fmt "# \\")))
-  (let ((samples (list "(one . two)"
-                       (s "(~%one~%; two~%)")
-                       "#|one#|two|#three|#"
-                       "# + one"
-                       "# - one"
-                       "` \"str\""
-                       (s "`~%(one two)")
-                       "# ` (one two)"
-                       "# \\ space"
-                       (s "#|  one~%    two|#")
-                       (s "(defmacro with-thing (x)~%body)")
-                       (s "(define~%  my-var~%  (+ one two)~%)")
-                       (s "(define~%  my-var~%  (+ one~%    two~%  )~%)")
-                       (s "(define (square x)~%(* x x))")
-                       (s "(defmethod render~%:around~%((x thing))~%body)")
-                       (s "(dict~%  :one 10 :two 20 :three 30~%)")
-                       (s "(dict~%  :one :two :three :four~%)")
-                       (s "(loop~%  :from 0 :for previous = nil :then form :do ...~%)")
-                       (s "(loop for form in forms~%      do form)")
-                       (s "(loop cl-user::for x cl-user::in xs~%)")
-                       (s "(loop~%  for it in xs collect it~%)")
-                       (s "(loop~%  for i fixnum from 0 collect i~%)")
-                       (s "(loop~%  named scan with x = 1 collect x~%)")
-                       (s "(one #|a#|b|#c|# two)")
-                       (s "#'#':#(one two~%)"))))
-    (dolist (sample samples)
-      (let ((once (fmt sample)))
-        (check= (format nil "idempotent ~A" sample) once (fmt once)))))
+  (let
+    ((samples (list "(one . two)" (s "(~%one~%; two~%)") "#|one#|two|#three|#" "# + one" "# - one" "` \"str\"" (s "`~%(one two)") "# ` (one two)" "# \\ space" (s "#|  one~%    two|#") (s "(defmacro with-thing (x)~%body)") (s "(define~%  my-var~%  (+ one two)~%)") (s "(define~%  my-var~%  (+ one~%    two~%  )~%)") (s "(define (square x)~%(* x x))") (s "(defmethod render~%:around~%((x thing))~%body)") (s "(dict~%  :one 10 :two 20 :three 30~%)") (s "(dict~%  :one :two :three :four~%)") (s "(loop~%  :from 0 :for previous = nil :then form :do ...~%)") (s "(loop for form in forms~%      do form)") (s "(loop cl-user::for x cl-user::in xs~%)") (s "(loop~%  for it in xs collect it~%)") (s "(loop~%  for i fixnum from 0 collect i~%)") (s "(loop~%  named scan with x = 1 collect x~%)") (s "(one #|a#|b|#c|# two)") (s "#'#':#(one two~%)"))))
+    (dolist
+      (sample samples)
+      (let
+        ((once (fmt sample)))
+        (check= (format nil "idempotent ~A" sample) once (fmt once))
+      )
+    )
+  )
   (format t "~&~D failure(s).~%" *failures*)
-  (when (plusp *failures*)
-    (sb-ext:exit :code 1)))
+  (when
+    (plusp *failures*)
+    (sb-ext:exit :code 1)
+  )
+)
 
 (run-tests)
