@@ -1,10 +1,14 @@
 *
 !/readme.md
 !/lispfmt.asd
+
 !/src/
-!/src/**
-!/tests/
-!/tests/**
+/src/*
+!/src/*.lisp
+
+!/test/
+/test/*
+!/test/*.lisp
 
 # Must be listed LAST.
 .*

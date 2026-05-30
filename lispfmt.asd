@@ -3,5 +3,4 @@
   :author ""
   :license "MIT"
   :serial t
-  :components ((:file "src/package")
-               (:file "src/lispfmt")))
+  :components ((:file "src/lispfmt")))

@@ -1,3 +1,8 @@
+(defpackage #:lispfmt
+  (:use #:cl)
+  (:export #:format-string
+           #:formatter-error))
+
 (in-package #:lispfmt)
 
 (defconstant +indent+  2)
