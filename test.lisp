@@ -35,6 +35,70 @@
    "structured editing example"
    (s "(defun some-func ()~%  (let~%    (~%      (one 10)~%      (two 20)~%    )~%    (print (+ one two))~%    (print (+ two one))~%  )~%)~%~%")
    (fmt (s "(defun some-func ()~%  (let ((one 10) (two 20))~%    (print (+ one two))~%    (print (+ two one))))")))
+  (check=
+   "definition macro shape"
+   (s "(defmacro with-thing (x) body)~%~%")
+   (fmt (s "(defmacro with-thing (x)~%body)")))
+  (check=
+   "definition variable shape"
+   (s "(defvar *x* 10)~%~%")
+   (fmt (s "(defvar *x*~%10)")))
+  (check=
+   "definition parameter shape"
+   (s "(defparameter *x* 10)~%~%")
+   (fmt (s "(defparameter *x*~%10)")))
+  (check=
+   "definition class shape"
+   (s "(defclass thing ()~%  ((slot :initarg :slot))~%)~%~%")
+   (fmt (s "(defclass thing ()~%((slot :initarg :slot)))")))
+  (check=
+   "definition method qualifier conservative shape"
+   (s "(defmethod render~%  :around~%  ((x thing))~%  body~%)~%~%")
+   (fmt (s "(defmethod render~%:around~%((x thing))~%body)")))
+  (check=
+   "definition condition shape"
+   (s "(define-condition bad-thing (error)~%  ((reason :initarg :reason))~%)~%~%")
+   (fmt (s "(define-condition bad-thing (error)~%((reason :initarg :reason)))")))
+  (check=
+   "definition struct shape"
+   (s "(defstruct point~%  x~%  y~%)~%~%")
+   (fmt (s "(defstruct point~%x~%y)")))
+  (check=
+   "scheme define function shape"
+   (s "(define (square x) (* x x))~%~%")
+   (fmt (s "(define (square x)~%(* x x))")))
+  (check=
+   "scheme define variable shape"
+   (s "(define pi 3.14)~%~%")
+   (fmt (s "(define pi~%3.14)")))
+  (check=
+   "scheme define inline-safe body"
+   (s "(define my-var (+ one two))~%~%")
+   (fmt (s "(define~%  my-var~%  (+ one two)~%)")))
+  (check=
+   "scheme define preserves multiline body"
+   (s "(define my-var~%  (+~%    one~%    two~%  )~%)~%~%")
+   (fmt (s "(define~%  my-var~%  (+ one~%    two~%  )~%)")))
+  (check=
+   "scheme define-syntax shape"
+   (s "(define-syntax when transformer)~%~%")
+   (fmt (s "(define-syntax when~%transformer)")))
+  (check=
+   "scheme define-record-type shape"
+   (s "(define-record-type point~%  constructor~%  predicate~%)~%~%")
+   (fmt (s "(define-record-type point~%constructor~%predicate)")))
+  (check=
+   "definition keyword false positive"
+   (s "(def~%  :keyword~%  value~%)~%~%")
+   (fmt (s "(def~%:keyword~%value)")))
+  (check=
+   "definition numeric false positive"
+   (s "(deft~%  123~%  body~%)~%~%")
+   (fmt (s "(deft~%123~%body)")))
+  (check=
+   "definition prefix false positive"
+   (s "(notdef~%  name~%  args~%  body~%)~%~%")
+   (fmt (s "(notdef name~%args~%body)")))
   (check= "prefix hash chain" (s "###one two~%~%") (fmt "# # # one two"))
   (check= "prefix quote list" (s "#'(one two)~%~%") (fmt "# ' ( one two )"))
   (check= "datum comment prefix atom" (s "#;one~%~%") (fmt "# ; one"))
@@ -97,6 +161,11 @@
                        "# - one"
                        "# \\ space"
                        (s "#|  one~%    two|#")
+                       (s "(defmacro with-thing (x)~%body)")
+                       (s "(define~%  my-var~%  (+ one two)~%)")
+                       (s "(define~%  my-var~%  (+ one~%    two~%  )~%)")
+                       (s "(define (square x)~%(* x x))")
+                       (s "(defmethod render~%:around~%((x thing))~%body)")
                        (s "#'#':#(one two~%)"))))
     (dolist (sample samples)
       (let ((once (fmt sample)))
