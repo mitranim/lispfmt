@@ -23,7 +23,7 @@ test_lib:
 test_cli: $(CLI)
 	mkdir -p $(TEST_TMP)
 	printf '(one two)\n' | $(SBCL) --script cli.lisp >$(TEST_TMP)/out 2>$(TEST_TMP)/err
-	printf '(one two)\n\n' >$(TEST_TMP)/expected
+	printf '(one two)\n' >$(TEST_TMP)/expected
 	cmp $(TEST_TMP)/expected $(TEST_TMP)/out
 	test ! -s $(TEST_TMP)/err
 	printf ')\n' | $(SBCL) --script cli.lisp >$(TEST_TMP)/bad-out 2>$(TEST_TMP)/bad-err; test $$? -ne 0
@@ -35,7 +35,7 @@ test_cli: $(CLI)
 	test ! -s $(TEST_TMP)/args-out
 	grep -q '^\[$(CLI)\] arguments are not supported' $(TEST_TMP)/args-err
 	printf '# ; one\n' | ./$(CLI) >$(TEST_TMP)/exe-out 2>$(TEST_TMP)/exe-err
-	printf '#;one\n\n' >$(TEST_TMP)/exe-expected
+	printf '#;one\n' >$(TEST_TMP)/exe-expected
 	cmp $(TEST_TMP)/exe-expected $(TEST_TMP)/exe-out
 	test ! -s $(TEST_TMP)/exe-err
 	rm -rf $(TEST_TMP)

@@ -34,10 +34,10 @@
     (loop for i from 0 below (length string)
           for ch = (char string i)
           do (cond
-               ((char= ch #\Return)
-                (write-char #\Newline out)
+               ((char= ch #\return)
+                (write-char #\newline out)
                 (when (and (< (1+ i) (length string))
-                           (char= (char string (1+ i)) #\Newline))
+                           (char= (char string (1+ i)) #\newline))
                   (incf i)))
                (t
                 (write-char ch out))))))
@@ -61,7 +61,7 @@
     (unless ch
       (error 'formatter-error :message "Unexpected end of input."))
     (incf (parser-pos p))
-    (if (char= ch #\Newline)
+    (if (char= ch #\newline)
         (progn
           (incf (parser-line p))
           (setf (parser-col p) 0))
@@ -69,13 +69,13 @@
     ch))
 
 (defun whitespace-char-p (ch)
-  (and ch (member ch '(#\Space #\Tab #\Newline #\Page #\Return) :test #'char=)))
+  (and ch (member ch '(#\space #\tab #\newline #\page #\return) :test #'char=)))
 
 (defun skip-whitespace (p)
   (let ((newlines 0))
     (loop while (and (not (parser-end-p p))
                      (whitespace-char-p (peek p)))
-          do (when (char= (peek p) #\Newline)
+          do (when (char= (peek p) #\newline)
                (incf newlines))
              (advance p))
     newlines))
@@ -104,7 +104,7 @@
         (start-col (parser-col p))
         (out (make-string-output-stream)))
     (loop while (and (not (parser-end-p p))
-                     (not (char= (peek p) #\Newline)))
+                     (not (char= (peek p) #\newline)))
           do (write-char (advance p) out))
     (make-node :kind :line-comment
                :text (get-output-stream-string out)
@@ -352,13 +352,13 @@
     (values (nreverse forms) (nreverse gaps))))
 
 (defun trim-right-spaces (string)
-  (string-right-trim '(#\Space #\Tab #\Newline #\Return) string))
+  (string-right-trim '(#\space #\tab #\newline #\return) string))
 
 (defun split-lines (string)
   (let ((lines '())
         (start 0))
     (loop for i from 0 below (length string)
-          when (char= (char string i) #\Newline)
+          when (char= (char string i) #\newline)
             do (push (subseq string start i) lines)
                (setf start (1+ i)))
     (push (subseq string start) lines)
@@ -372,17 +372,17 @@
           do (incf i))
     (cond
       ((= i len) trimmed)
-      ((char= (char trimmed i) #\Space) trimmed)
+      ((char= (char trimmed i) #\space) trimmed)
       (t (concatenate 'string (subseq trimmed 0 i) " " (subseq trimmed i))))))
 
 (defun flush-block-comment-text (out pending)
   (let ((text (string-right-trim
-               '(#\Space #\Tab #\Newline #\Return)
-               (string-left-trim '(#\Newline #\Return)
+               '(#\space #\tab #\newline #\return)
+               (string-left-trim '(#\newline #\return)
                                  (get-output-stream-string pending)))))
     (when (plusp (length text))
       (write-string text out)
-      (write-char #\Newline out))))
+      (write-char #\newline out))))
 
 (defun format-block-comment (text)
   (let ((out (make-string-output-stream))
@@ -394,7 +394,7 @@
                      (string= "#|" text :start2 i :end2 (+ i 2)))
                 (flush-block-comment-text out pending)
                 (write-string "#|" out)
-                (write-char #\Newline out)
+                (write-char #\newline out)
                 (incf i 2))
                ((and (<= (+ i 2) (length text))
                      (string= "|#" text :start2 i :end2 (+ i 2)))
@@ -402,27 +402,27 @@
                 (write-string "|#" out)
                 (incf i 2)
                 (when (< i (length text))
-                  (write-char #\Newline out)))
+                  (write-char #\newline out)))
                (t
                 (write-char (char text i) pending)
                 (incf i))))
     (flush-block-comment-text out pending)
-    (string-right-trim '(#\Newline) (get-output-stream-string out))))
+    (string-right-trim '(#\newline) (get-output-stream-string out))))
 
 (defun format-string-literal (text)
-  (if (not (find #\Newline text))
+  (if (not (find #\newline text))
       text
       (let ((lines (split-lines text)))
         (with-output-to-string (out)
           (loop for line in lines
                 for index from 0
                 do (when (> index 0)
-                     (write-char #\Newline out))
+                     (write-char #\newline out))
                    (cond
                      ((and (= index (1- (length lines)))
-                           (string= "\"" (string-left-trim '(#\Space #\Tab) line)))
+                           (string= "\"" (string-left-trim '(#\space #\tab) line)))
                       (write-char #\" out))
-                     ((every (lambda (ch) (member ch '(#\Space #\Tab) :test #'char=)) line)
+                     ((every (lambda (ch) (member ch '(#\space #\tab) :test #'char=)) line)
                       nil)
                      (t
                       (write-string line out))))))))
@@ -522,7 +522,7 @@
      (format-list-node node 0 :inline t))))
 
 (defun multiline-string-p (s)
-  (find #\Newline s))
+  (find #\newline s))
 
 (defun node-forces-multiline-p (node)
   (or (eq (node-kind node) :line-comment)
@@ -559,7 +559,7 @@
                      (not (trailing-line-comment-p previous child)))))
 
 (defun indent-string (indent)
-  (make-string indent :initial-element #\Space))
+  (make-string indent :initial-element #\space))
 
 (defun format-for-child-line (node indent)
   (if (binding-list-p node)
@@ -710,7 +710,7 @@
         (loop for item in items
               for index from 0
               do (when (> index 0)
-                   (write-char #\Space out))
+                   (write-char #\space out))
                  (write-string (loop-line-item-inline-string item) out)))
       (let* ((item (first items))
              (node (loop-line-item-node item)))
@@ -724,7 +724,7 @@
       (loop for line in (split-lines string)
             for index from 0
             do (when (> index 0)
-                 (write-char #\Newline out)
+                 (write-char #\newline out)
                  (when (and (plusp (length line))
                             (not (string-prefix-p indentation line)))
                    (write-string indentation out)))
@@ -746,9 +746,9 @@
                (if (and previous
                         (= (node-end-line previous) (node-start-line (first children)))
                         (eq (node-kind (first children)) :line-comment))
-                   (write-char #\Space out)
+                   (write-char #\space out)
                    (progn
-                     (write-char #\Newline out)
+                     (write-char #\newline out)
                      (write-string (indent-string indent) out)))
                (write-string (if (rendered-line-needs-context-indent-p line-nodes)
                                  (indent-multiline-string line indent)
@@ -809,10 +809,10 @@
                  (write-string open-token out)
                  (write-string (format-inline-children (subseq children 0 head-count)) out)
                  (dolist (child remaining)
-                   (write-char #\Newline out)
+                   (write-char #\newline out)
                    (write-string (indent-string (+ indent +indent+)) out)
                    (write-string (format-node child (+ indent +indent+)) out))
-                 (write-char #\Newline out)
+                 (write-char #\newline out)
                  (write-string (indent-string indent) out)
                  (write-string close out))))))
       ((and (eq (node-kind node) :list)
@@ -827,7 +827,7 @@
                               out
                               :loop-style t
                               :previous previous))
-         (write-char #\Newline out)
+         (write-char #\newline out)
          (write-string (indent-string indent) out)
          (write-string close out)))
       ((and (eq (node-kind node) :list)
@@ -841,7 +841,7 @@
            (when (and (first remaining)
                       (eq (node-kind (first remaining)) :string)
                       (multiline-string-p (node-text (first remaining))))
-             (write-char #\Space out)
+             (write-char #\space out)
              (write-string (format-node (first remaining) (+ indent (length open-token) 1)) out)
              (setf previous (first remaining)
                    remaining (rest remaining)))
@@ -851,14 +851,14 @@
                               :loop-style (loop-operator-p (first children))
                               :group-keywords (not (def-operator-p (first children)))
                               :previous previous))
-         (write-char #\Newline out)
+         (write-char #\newline out)
          (write-string (indent-string indent) out)
          (write-string close out)))
       (t
        (with-output-to-string (out)
          (write-string open-token out)
          (write-child-lines children (+ indent +indent+) out :group-keywords t)
-         (write-char #\Newline out)
+         (write-char #\newline out)
          (write-string (indent-string indent) out)
          (write-string close out))))))
 
@@ -867,11 +867,14 @@
     (loop for child in children
           for index from 0
           do (when (> index 0)
-               (write-char #\Space out))
+               (write-char #\space out))
              (write-string (node-inline-string child) out))))
 
 (defun normalize-final-newlines (string)
-  (concatenate 'string (string-right-trim '(#\Newline #\Space #\Tab) string) (string #\Newline) (string #\Newline)))
+  (let ((trimmed (string-right-trim '(#\newline #\space #\tab) string)))
+    (if (zerop (length trimmed))
+        ""
+        (concatenate 'string trimmed (string #\newline)))))
 
 (defun format-string (string)
   (multiple-value-bind (forms gaps) (parse-all string)
@@ -886,10 +889,10 @@
                           (not (and previous
                                     (eq (node-kind previous) :prefix)
                                     (null (node-children previous)))))
-                     (write-char #\Space raw)
+                     (write-char #\space raw)
                      (progn
-                       (write-char #\Newline raw)
+                       (write-char #\newline raw)
                        (when (>= gap 2)
-                         (write-char #\Newline raw)))))
+                         (write-char #\newline raw)))))
                (write-string (format-node form 0) raw))
       (normalize-final-newlines (get-output-stream-string raw)))))
