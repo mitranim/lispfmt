@@ -1,7 +1,7 @@
 (defpackage #:lispfmt-tests (:use #:cl))
 (in-package #:lispfmt-tests)
 
-(load (merge-pathnames "../src/lispfmt.lisp" *load-truename*))
+(load (merge-pathnames "lispfmt.lisp" *load-truename*))
 
 (defvar *failures* 0)
 

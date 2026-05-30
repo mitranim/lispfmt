@@ -1,14 +1,8 @@
 *
 !/readme.md
-!/lispfmt.asd
-
-!/src/
-/src/*
-!/src/*.lisp
-
-!/test/
-/test/*
-!/test/*.lisp
+!/makefile
+!/*.asd
+!/*.lisp
 
 # Must be listed LAST.
 .*
