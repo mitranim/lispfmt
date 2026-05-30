@@ -1,6 +1,7 @@
 *
 !/readme.md
 !/makefile
+!/unlicense
 !/*.asd
 !/*.lisp
 
