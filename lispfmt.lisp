@@ -533,64 +533,50 @@
       (format-list-node node indent :force-multiline t)
       (format-node node indent)))
 
-(defun consume-generic-keyword-line (children indent)
-  (let ((child (first children))
-        (next (second children)))
-    (if (and (keyword-atom-p child)
-             next
-             (inline-safe-node-p next))
-        (values (format nil "~A ~A"
-                        (format-node child indent)
-                        (node-inline-string next))
-                (cddr children)
-                next)
-        (values (format-for-child-line child indent)
-                (rest children)
-                child))))
-
-(defun consume-loop-keyword-line (children indent)
+(defun child-line-group (children &key loop-style group-keywords)
   (let ((child (first children)))
-    (if (keyword-atom-p child)
-        (let ((line-nodes (list child))
-              (rest (rest children)))
-          (loop while (and rest
-                           (not (keyword-atom-p (first rest)))
-                           (inline-safe-node-p (first rest)))
-                do (setf line-nodes (append line-nodes (list (first rest)))
-                         rest (rest rest)))
-          (values (format-inline-children line-nodes)
-                  rest
-                  (first (last line-nodes))))
-        (values (format-for-child-line child indent)
-                (rest children)
-                child))))
+    (cond
+      ((and loop-style (keyword-atom-p child))
+       (let ((line-nodes (list child))
+             (rest (rest children)))
+         (loop while (and rest
+                          (not (keyword-atom-p (first rest)))
+                          (inline-safe-node-p (first rest)))
+               do (push (first rest) line-nodes)
+                  (setf rest (rest rest)))
+         (let ((line-nodes (nreverse line-nodes)))
+           (values line-nodes rest (first (last line-nodes))))))
+      ((and group-keywords
+            (keyword-atom-p child)
+            (second children)
+            (inline-safe-node-p (second children)))
+       (values (list child (second children))
+               (cddr children)
+               (second children)))
+      (t
+       (values (list child) (rest children) child)))))
 
-(defun consume-plain-child-line (children indent)
-  (let ((child (first children)))
-    (values (format-for-child-line child indent)
-            (rest children)
-            child)))
+(defun format-child-line (nodes indent)
+  (if (rest nodes)
+      (format-inline-children nodes)
+      (format-for-child-line (first nodes) indent)))
 
 (defun write-child-lines (children indent out &key loop-style group-keywords previous)
   (loop while children
-        do (multiple-value-bind (line rest last-node)
-               (cond
-                 (loop-style
-                  (consume-loop-keyword-line children indent))
-                 (group-keywords
-                  (consume-generic-keyword-line children indent))
-                 (t
-                  (consume-plain-child-line children indent)))
+        do (multiple-value-bind (line-nodes rest last-node)
+               (child-line-group children
+                                 :loop-style loop-style
+                                 :group-keywords group-keywords)
              (if (and previous
                       (= (node-end-line previous) (node-start-line (first children)))
                       (eq (node-kind (first children)) :line-comment))
                  (progn
                    (write-char #\Space out)
-                   (write-string line out))
+                   (write-string (format-child-line line-nodes indent) out))
                  (progn
                    (write-char #\Newline out)
                    (write-string (indent-string indent) out)
-                   (write-string line out)))
+                   (write-string (format-child-line line-nodes indent) out)))
              (setf previous last-node
                    children rest))))
 
