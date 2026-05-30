@@ -39,6 +39,11 @@
   (check= "prefix quote list" (s "#'(one two)~%~%") (fmt "# ' ( one two )"))
   (check= "datum comment prefix atom" (s "#;one~%~%") (fmt "# ; one"))
   (check= "datum comment prefix list" (s "#;(one two)~%~%") (fmt "# ; ( one two )"))
+  (check= "feature prefix plus atom" (s "#+one~%~%") (fmt "# + one"))
+  (check= "feature prefix minus atom" (s "#-one~%~%") (fmt "# - one"))
+  (check= "feature prefix plus list" (s "#+(one two)~%~%") (fmt "# + (one two)"))
+  (check= "fuzzy character literal single char" (s "#\\A~%~%") (fmt "# \\ A"))
+  (check= "fuzzy character literal named char" (s "#\\space~%~%") (fmt "# \\ space"))
   (check=
    "prefix separated from block comment"
    (s "#':~%#|~%one~%|#~%~%")
@@ -47,6 +52,10 @@
    "nested block comment"
    (s "#|~%one~%#|~%two~%|#~%three~%|#~%~%")
    (fmt "#|one#|two|#three|#"))
+  (check=
+   "block comment preserves inner indentation"
+   (s "#|~%  one~%    two~%|#~%~%")
+   (fmt (s "#|  one~%    two|#")))
   (check= "cons dot single line" (s "(one . two)~%~%") (fmt "(one . two)"))
   (check=
    "cons dot multiline"
@@ -80,9 +89,14 @@
   (check-error "mismatched delimiter" (lambda () (fmt "(]")))
   (check-error "unexpected close" (lambda () (fmt ")")))
   (check-error "whitespace after character literal" (lambda () (fmt "#\\ ")))
+  (check-error "fuzzy character literal missing char" (lambda () (fmt "# \\")))
   (let ((samples (list "(one . two)"
                        (s "(~%one~%; two~%)")
                        "#|one#|two|#three|#"
+                       "# + one"
+                       "# - one"
+                       "# \\ space"
+                       (s "#|  one~%    two|#")
                        (s "#'#':#(one two~%)"))))
     (dolist (sample samples)
       (let ((once (fmt sample)))

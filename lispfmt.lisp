@@ -21,8 +21,7 @@
   prefix
   start-line
   end-line
-  start-col
-  trailing-comment)
+  start-col)
 
 (defstruct parser
   text
@@ -96,9 +95,6 @@
 (defun delimiter-char-p (ch)
   (or (opener-p ch) (closer-p ch)))
 
-(defun prefix-first-char-p (ch)
-  (and ch (find ch "#',\\")))
-
 (defun word-char-p (ch)
   (and ch (or (alphanumericp ch)
               (member ch '(#\- #\_) :test #'char=))))
@@ -164,14 +160,10 @@
                  :end-line (parser-line p)
                  :start-col start-col)))
 
-(defun parse-character-literal (p)
-  (let ((start-line (parser-line p))
-        (start-col (parser-col p)))
-    (advance p)
-    (advance p)
-    (let ((next (peek p)))
-      (when (or (null next) (whitespace-char-p next))
-        (error 'formatter-error :message "Character literal requires a visible character or name.")))
+(defun parse-character-literal-tail (p start-line start-col)
+  (let ((next (peek p)))
+    (when (or (null next) (whitespace-char-p next))
+      (error 'formatter-error :message "Character literal requires a visible character or name.")))
     (let ((out (make-string-output-stream)))
       (write-string "#\\" out)
       (if (word-char-p (peek p))
@@ -182,7 +174,14 @@
                  :text (get-output-stream-string out)
                  :start-line start-line
                  :end-line (parser-line p)
-                 :start-col start-col))))
+                 :start-col start-col)))
+
+(defun parse-character-literal (p)
+  (let ((start-line (parser-line p))
+        (start-col (parser-col p)))
+    (advance p)
+    (advance p)
+    (parse-character-literal-tail p start-line start-col)))
 
 (defun parse-atom (p)
   (let ((start-line (parser-line p))
@@ -216,6 +215,8 @@
          (t "#")))
       ((member ch '(#\' #\,) :test #'char=)
        (string ch))
+      ((and have-prefix (member ch '(#\+ #\- #\\) :test #'char=))
+       (string ch))
       ((and have-prefix (char= ch #\;))
        ";")
       (t nil))))
@@ -236,6 +237,11 @@
     (when parts
       (let ((prefix (apply #'concatenate 'string (nreverse parts))))
         (skip-whitespace p)
+        (when (and (>= (length prefix) 2)
+                   (string= "#\\" prefix
+                            :start1 (- (length prefix) 2)))
+          (return-from parse-prefix-chain
+            (parse-character-literal-tail p start-line start-col)))
         (when (and (not (parser-end-p p))
                    (char= (peek p) #\:))
           (setf prefix (concatenate 'string prefix ":"))
@@ -273,14 +279,7 @@
             (error 'formatter-error
                    :message (format nil "Mismatched delimiter ~C, expected ~C." actual closer))))
         (return))
-      (let ((form (parse-form p)))
-        (push form children)
-        (skip-whitespace p)
-        (when (and children
-                   (eq (node-kind form) :line-comment)
-                   (not (parser-end-p p))
-                   (not (char= (peek p) #\Newline)))
-          nil)))
+      (push (parse-form p) children))
     (let ((node (make-node :kind :list
                            :children (nreverse children)
                            :opener (string opener)
@@ -370,8 +369,10 @@
       (t (concatenate 'string (subseq trimmed 0 i) " " (subseq trimmed i))))))
 
 (defun flush-block-comment-text (out pending)
-  (let ((text (string-trim '(#\Space #\Tab #\Newline #\Return)
-                           (get-output-stream-string pending))))
+  (let ((text (string-right-trim
+               '(#\Space #\Tab #\Newline #\Return)
+               (string-left-trim '(#\Newline #\Return)
+                                 (get-output-stream-string pending)))))
     (when (plusp (length text))
       (write-string text out)
       (write-char #\Newline out))))
@@ -429,9 +430,6 @@
 (defun atom-text= (node text)
   (and (eq (node-kind node) :atom)
        (string-equal (node-text node) text)))
-
-(defun standalone-line-comment-p (node)
-  (eq (node-kind node) :line-comment))
 
 (defun node-inline-string (node)
   (case (node-kind node)
