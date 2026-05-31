@@ -2,9 +2,7 @@
 
 The style is biased towards structured editing. When a form is already multiline, the formatter spends more lines so child forms can be moved, deleted, or inserted with line-based editor commands.
 
-It formats text, not evaluated Lisp objects. Comments, strings, delimiter forms, prefix-like reader tokens, and original line shape all matter. The formatter does not use the Lisp reader.
-
-The implementation was mostly **bot-prompted** with Codex.
+The implementation was mostly **bot-prompted** with OpenAI Codex.
 
 ## TOC
 
